@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 
 const todos = [
-    { id: 1, name: 'TASK1', createdAt: new Date() },
-    { id: 2, name: 'TASK2', createdAt: new Date() },
-    { id: 3, name: 'TASK3', createdAt: new Date() }
+    { id: 1, name: 'TASK1', text: 'descripcion', createdAt: new Date() },
+    { id: 2, name: 'TASK2', text: '', createdAt: new Date() },
+    { id: 3, name: 'TASK3', text: 'tarea 3',createdAt: new Date() }
 ];
 
 export class TodosController {
@@ -31,7 +31,7 @@ export class TodosController {
 
 
     public create = (req: Request, res: Response) => {
-        const { name } = req.body;
+        const { name, text } = req.body;
 
         if(!name) {
             res.status(400).json({error: `El nombre es requerido.`});
@@ -47,7 +47,8 @@ export class TodosController {
 
         const newTodo = {
             id: todos.length + 1,
-            name: name,
+            name,
+            text,
             createdAt: new Date()
         };
 
@@ -57,7 +58,7 @@ export class TodosController {
 
 
     public update = (req: Request, res: Response) => {
-        const { name,  createdAt} = req.body;
+        const { name,  createdAt, text } = req.body;
         const id = +req.params.id
 
         if( isNaN(id) ) {
@@ -74,6 +75,7 @@ export class TodosController {
 
         todo.name = name || todo.name;
         todo.createdAt = createdAt || todo.createdAt;
+        todo.text = text || todo.text;
 
 
         todos.forEach((todo, index) => {
