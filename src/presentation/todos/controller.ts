@@ -1,28 +1,26 @@
 import { Request, Response } from "express";
-
-const todos = [
-    { id: 1, name: 'TASK1', text: 'descripcion', createdAt: new Date() },
-    { id: 2, name: 'TASK2', text: '', createdAt: new Date() },
-    { id: 3, name: 'TASK3', text: 'tarea 3',createdAt: new Date() }
-];
+import { prisma } from "../../data/postgres";
 
 export class TodosController {
 
     constructor() { }
 
-    public getAll = (req: Request, res: Response) => {
+    public getAll = async (req: Request, res: Response) => {
+        const todos = await prisma.todo.findMany({})
         res.json(todos);
     }
 
 
-    public getById = (req: Request, res: Response) => {
+    public getById = async (req: Request, res: Response) => {
         const id = +req.params.id
         if( isNaN(id) ) {
             res.status(400).json({error: 'ID no es un numero entero.'})
             return;
         } 
 
-        const todo = todos.find(todo => todo.id == id);
+        const todo = await prisma.todo.findUnique({
+            where: { id }
+        });
 
         ( todo ) 
             ? res.json(todo)
@@ -30,7 +28,7 @@ export class TodosController {
     }
 
 
-    public create = (req: Request, res: Response) => {
+    public create = async (req: Request, res: Response) => {
         const { name, text } = req.body;
 
         if(!name) {
@@ -38,7 +36,14 @@ export class TodosController {
             return;
         }
 
-        const todo = todos.find(todo => todo.name == name);
+        if(!text) {
+            res.status(400).json({error: `El texto es requerido.`});
+            return;
+        }
+
+        const todo = await prisma.todo.findFirst({
+            where: { name: name }
+        })
 
         if(todo) {
             res.status(400).json({error: `Tarea con nombre ${todo.name} ya existe.`});
@@ -46,18 +51,17 @@ export class TodosController {
         }
 
         const newTodo = {
-            id: todos.length + 1,
             name,
             text,
             createdAt: new Date()
         };
 
-        todos.push(newTodo);
-        res.json(newTodo);
+        const todoDB = await prisma.todo.create({data: newTodo});
+        res.json(todoDB);
     }
 
 
-    public update = (req: Request, res: Response) => {
+    public update = async (req: Request, res: Response) => {
         const { name,  createdAt, text } = req.body;
         const id = +req.params.id
 
@@ -66,7 +70,9 @@ export class TodosController {
             return;
         } 
 
-        const todo = todos.find(todo => todo.id == id);
+        const todo = await prisma.todo.findUnique({
+            where: { id }
+        })
 
         if(!todo) {
             res.status(404).json({error: `Tarea con id ${id} no existe.`});
@@ -74,21 +80,18 @@ export class TodosController {
         }
 
         todo.name = name || todo.name;
-        todo.createdAt = createdAt || todo.createdAt;
         todo.text = text || todo.text;
 
-
-        todos.forEach((todo, index) => {
-            if(todo.id == id) {
-                todos[index] = todo;
-            }
+        const updateTodo = await prisma.todo.update({
+            where: { id },
+            data: todo
         });
 
         res.json(todo);
     }
 
 
-    public delete = (req: Request, res: Response) => {
+    public delete = async (req: Request, res: Response) => {
         const id = +req.params.id;
 
         if( isNaN(id) ) {
@@ -96,14 +99,19 @@ export class TodosController {
             return;
         } 
 
-        const todo = todos.find(todo => todo.id == id);
+        const todo = await prisma.todo.findUnique({
+            where: { id }
+        })
 
         if(!todo) {
             res.status(404).json({error: `Tarea con id ${id} no existe.`});
             return;
         }
 
-        todos.splice(todos.indexOf(todo), 1);
-        res.json(todo);
+        const result = await prisma.todo.delete({
+            where: { id }
+        })
+
+        res.json(result);
     }
 }
